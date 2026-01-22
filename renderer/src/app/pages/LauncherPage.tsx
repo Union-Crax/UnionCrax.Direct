@@ -117,7 +117,7 @@ export function LauncherPage() {
         return
       }
 
-      const response = await fetch(apiUrl("/api/downloads/all"))
+      const response = await apiFetch("/api/downloads/all")
 
       if (!response.ok) {
         throw new Error(`Stats API route failed: ${response.status}`)
@@ -134,7 +134,7 @@ export function LauncherPage() {
 
   const fetchGames = async (): Promise<Game[]> => {
     try {
-      const response = await fetch(apiUrl("/api/games"))
+      const response = await apiFetch("/api/games")
 
       if (!response.ok) {
         const errorCode = generateErrorCode(ErrorTypes.GAME_FETCH, "launcher")

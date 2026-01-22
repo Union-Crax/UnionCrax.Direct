@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Calendar, HardDrive, Download, Eye, Wifi, Flame, Play, Square } from "lucide-react"
 import { formatNumber, hasOnlineMode, pickGameExecutable, proxyImageUrl } from "@/lib/utils"
 import { useDownloads } from "@/context/downloads-context"
-import { apiUrl } from "@/lib/api"
+import { apiFetch } from "@/lib/api"
 import { ExePickerModal } from "@/components/ExePickerModal"
 
 interface GameCardProps {
@@ -124,7 +124,7 @@ export const GameCard = memo(function GameCard({
 
     setIsLoadingStats(true)
     try {
-      const response = await fetch(apiUrl(`/api/stats/${encodeURIComponent(game.appid)}`))
+      const response = await apiFetch(`/api/stats/${encodeURIComponent(game.appid)}`)
       if (response.ok) {
         const data = await response.json()
         if (data.success) {

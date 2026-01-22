@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { apiUrl } from "@/lib/api"
+import { apiFetch } from "@/lib/api"
 import type { Game, GameStats } from "@/lib/types"
 
 type GamesDataState = {
@@ -46,7 +46,7 @@ async function readInstalledGames(): Promise<Game[]> {
 }
 
 async function fetchGames(): Promise<Game[]> {
-  const response = await fetch(apiUrl("/api/games"))
+  const response = await apiFetch("/api/games")
   if (!response.ok) {
     throw new Error(`Failed to load games (${response.status})`)
   }
@@ -54,7 +54,7 @@ async function fetchGames(): Promise<Game[]> {
 }
 
 async function fetchStats(): Promise<GameStats> {
-  const response = await fetch(apiUrl("/api/downloads/all"))
+  const response = await apiFetch("/api/downloads/all")
   if (!response.ok) {
     throw new Error(`Failed to load stats (${response.status})`)
   }

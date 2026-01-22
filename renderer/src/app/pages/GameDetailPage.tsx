@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { GameCard } from "@/components/GameCard"
 import { GameComments } from "@/components/GameComments"
 import { useDownloads } from "@/context/downloads-context"
-import { apiUrl } from "@/lib/api"
+import { apiFetch, apiUrl } from "@/lib/api"
 import { formatNumber, hasOnlineMode, pickGameExecutable, proxyImageUrl } from "@/lib/utils"
 import type { Game } from "@/lib/types"
 import { useGamesData } from "@/hooks/use-games"
@@ -57,7 +57,7 @@ export function GameDetailPage() {
       try {
         setLoading(true)
         setError(null)
-        const response = await fetch(apiUrl(`/api/games/${encodeURIComponent(appid)}`))
+        const response = await apiFetch(`/api/games/${encodeURIComponent(appid)}`)
         if (!response.ok) {
           throw new Error(`Unable to load game (${response.status})`)
         }
@@ -120,12 +120,12 @@ export function GameDetailPage() {
 
     const fetchCounts = async () => {
       try {
-        const downloadsRes = await fetch(apiUrl(`/api/downloads/count/${encodeURIComponent(appid)}`))
+        const downloadsRes = await apiFetch(`/api/downloads/count/${encodeURIComponent(appid)}`)
         if (downloadsRes.ok) {
           const data = await downloadsRes.json()
           if (data.success) setDownloadCount(data.downloads || 0)
         }
-        const viewsRes = await fetch(apiUrl(`/api/views/${encodeURIComponent(appid)}`))
+        const viewsRes = await apiFetch(`/api/views/${encodeURIComponent(appid)}`)
         if (viewsRes.ok) {
           const data = await viewsRes.json()
           if (data.success) setViewCount(data.viewCount || 0)
@@ -140,7 +140,7 @@ export function GameDetailPage() {
 
   useEffect(() => {
     if (!appid) return
-    fetch(apiUrl(`/api/views/${encodeURIComponent(appid)}`), {
+    apiFetch(`/api/views/${encodeURIComponent(appid)}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
     })
