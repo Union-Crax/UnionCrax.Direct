@@ -61,6 +61,7 @@ const downloadQueues = new Map()
 const globalDownloadQueue = []
 const activeExtractions = new Set()
 const runningGames = new Map()
+const gameMonitorIntervals = new Map() // Store intervals for process monitoring
 const downloadDirName = 'UnionCrax.Direct'
 const installingDirName = 'installing'
 const installedDirName = 'installed'
@@ -1516,15 +1517,25 @@ function registerRunningGamePid(appid, exePath, pid) {
   if (appid) runningGames.set(appid, payload)
   if (exePath) runningGames.set(exePath, payload)
   
+  // Clear any existing interval for this game
+  const existingInterval = gameMonitorIntervals.get(appid)
+  if (existingInterval) {
+    clearInterval(existingInterval)
+  }
+  
   // Monitor the process periodically to detect when it exits
   const checkInterval = setInterval(() => {
     if (!isProcessRunning(pid)) {
       clearInterval(checkInterval)
+      gameMonitorIntervals.delete(appid)
       if (appid) runningGames.delete(appid)
       if (exePath) runningGames.delete(exePath)
       ucLog(`Game process exited: ${appid} (PID: ${pid})`)
     }
   }, 2000) // Check every 2 seconds
+  
+  // Store the interval reference for cleanup
+  if (appid) gameMonitorIntervals.set(appid, checkInterval)
 }
 
 function getRunningGame(appid) {
@@ -1535,6 +1546,11 @@ function getRunningGame(appid) {
   // Verify the process is still running before returning it
   if (!isProcessRunning(byApp.pid)) {
     // Process has ended, clean up
+    const interval = gameMonitorIntervals.get(appid)
+    if (interval) {
+      clearInterval(interval)
+      gameMonitorIntervals.delete(appid)
+    }
     if (byApp.appid) runningGames.delete(byApp.appid)
     if (byApp.exePath) runningGames.delete(byApp.exePath)
     return null
@@ -2758,6 +2774,12 @@ ipcMain.handle('uc:game-exe-quit', async (_event, appid) => {
       stopped = await killProcessTreeElevated(running.pid)
     }
     if (stopped) {
+      // Clean up monitoring interval if it exists
+      const interval = gameMonitorIntervals.get(running.appid)
+      if (interval) {
+        clearInterval(interval)
+        gameMonitorIntervals.delete(running.appid)
+      }
       if (running.appid) runningGames.delete(running.appid)
       if (running.exePath) runningGames.delete(running.exePath)
     }
