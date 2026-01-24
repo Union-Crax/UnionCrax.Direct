@@ -1477,6 +1477,18 @@ function sendDownloadUpdate(win, payload) {
   }
 }
 
+function isProcessRunning(pid) {
+  if (!pid) return false
+  try {
+    // Sending signal 0 doesn't actually kill the process, it just checks if it exists
+    // On Windows, this works since Node.js v0.12
+    process.kill(pid, 0)
+    return true
+  } catch (err) {
+    return false
+  }
+}
+
 function registerRunningGame(appid, exePath, proc) {
   if (!proc || !proc.pid) return
   const payload = {
@@ -1503,13 +1515,32 @@ function registerRunningGamePid(appid, exePath, pid) {
   }
   if (appid) runningGames.set(appid, payload)
   if (exePath) runningGames.set(exePath, payload)
+  
+  // Monitor the process periodically to detect when it exits
+  const checkInterval = setInterval(() => {
+    if (!isProcessRunning(pid)) {
+      clearInterval(checkInterval)
+      if (appid) runningGames.delete(appid)
+      if (exePath) runningGames.delete(exePath)
+      ucLog(`Game process exited: ${appid} (PID: ${pid})`)
+    }
+  }, 2000) // Check every 2 seconds
 }
 
 function getRunningGame(appid) {
   if (!appid) return null
   const byApp = runningGames.get(appid)
-  if (byApp) return byApp
-  return null
+  if (!byApp) return null
+  
+  // Verify the process is still running before returning it
+  if (!isProcessRunning(byApp.pid)) {
+    // Process has ended, clean up
+    if (byApp.appid) runningGames.delete(byApp.appid)
+    if (byApp.exePath) runningGames.delete(byApp.exePath)
+    return null
+  }
+  
+  return byApp
 }
 
 function killProcessTree(pid) {
