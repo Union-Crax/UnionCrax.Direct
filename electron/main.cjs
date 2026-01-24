@@ -1490,6 +1490,27 @@ function isProcessRunning(pid) {
   }
 }
 
+function cleanupGameMonitoring(appid, exePath) {
+  // Clear intervals (safely handles same interval referenced by multiple keys)
+  const intervals = new Set()
+  if (appid) {
+    const interval = gameMonitorIntervals.get(appid)
+    if (interval) intervals.add(interval)
+    gameMonitorIntervals.delete(appid)
+  }
+  if (exePath) {
+    const interval = gameMonitorIntervals.get(exePath)
+    if (interval) intervals.add(interval)
+    gameMonitorIntervals.delete(exePath)
+  }
+  // Clear each unique interval once
+  intervals.forEach(interval => clearInterval(interval))
+  
+  // Remove from running games
+  if (appid) runningGames.delete(appid)
+  if (exePath) runningGames.delete(exePath)
+}
+
 function registerRunningGame(appid, exePath, proc) {
   if (!proc || !proc.pid) return
   const payload = {
@@ -1501,8 +1522,7 @@ function registerRunningGame(appid, exePath, proc) {
   if (appid) runningGames.set(appid, payload)
   if (exePath) runningGames.set(exePath, payload)
   proc.on('exit', () => {
-    if (appid) runningGames.delete(appid)
-    if (exePath) runningGames.delete(exePath)
+    cleanupGameMonitoring(appid, exePath)
   })
 }
 
@@ -1517,21 +1537,8 @@ function registerRunningGamePid(appid, exePath, pid) {
   if (appid) runningGames.set(appid, payload)
   if (exePath) runningGames.set(exePath, payload)
   
-  // Clear any existing interval for this game
-  if (appid) {
-    const existingInterval = gameMonitorIntervals.get(appid)
-    if (existingInterval) {
-      clearInterval(existingInterval)
-      gameMonitorIntervals.delete(appid)
-    }
-  }
-  if (exePath) {
-    const existingInterval = gameMonitorIntervals.get(exePath)
-    if (existingInterval) {
-      clearInterval(existingInterval)
-      gameMonitorIntervals.delete(exePath)
-    }
-  }
+  // Clear any existing monitoring for this game
+  cleanupGameMonitoring(appid, exePath)
   
   // Monitor the process periodically to detect when it exits
   const startTime = Date.now()
@@ -1540,24 +1547,20 @@ function registerRunningGamePid(appid, exePath, pid) {
   const checkInterval = setInterval(() => {
     // Check if we've exceeded maximum monitoring time
     if (Date.now() - startTime > maxMonitoringTime) {
-      clearInterval(checkInterval)
-      if (appid) gameMonitorIntervals.delete(appid)
-      if (exePath) gameMonitorIntervals.delete(exePath)
+      cleanupGameMonitoring(appid, exePath)
       ucLog(`Game process monitoring timeout: ${appid} (PID: ${pid})`, 'warn')
       return
     }
     
     if (!isProcessRunning(pid)) {
-      clearInterval(checkInterval)
-      if (appid) gameMonitorIntervals.delete(appid)
-      if (exePath) gameMonitorIntervals.delete(exePath)
-      if (appid) runningGames.delete(appid)
-      if (exePath) runningGames.delete(exePath)
+      cleanupGameMonitoring(appid, exePath)
       ucLog(`Game process exited: ${appid} (PID: ${pid})`)
     }
   }, 2000) // Check every 2 seconds
   
   // Store the interval reference for cleanup using both appid and exePath as keys
+  // Note: Both keys reference the same interval object, which is safe because
+  // clearInterval() can be called multiple times on the same interval
   if (appid) gameMonitorIntervals.set(appid, checkInterval)
   if (exePath) gameMonitorIntervals.set(exePath, checkInterval)
 }
@@ -1570,22 +1573,7 @@ function getRunningGame(appid) {
   // Verify the process is still running before returning it
   if (!isProcessRunning(byApp.pid)) {
     // Process has ended, clean up
-    if (byApp.appid) {
-      const interval = gameMonitorIntervals.get(byApp.appid)
-      if (interval) {
-        clearInterval(interval)
-        gameMonitorIntervals.delete(byApp.appid)
-      }
-      runningGames.delete(byApp.appid)
-    }
-    if (byApp.exePath) {
-      const interval = gameMonitorIntervals.get(byApp.exePath)
-      if (interval) {
-        clearInterval(interval)
-        gameMonitorIntervals.delete(byApp.exePath)
-      }
-      runningGames.delete(byApp.exePath)
-    }
+    cleanupGameMonitoring(byApp.appid, byApp.exePath)
     return null
   }
   
@@ -2807,23 +2795,7 @@ ipcMain.handle('uc:game-exe-quit', async (_event, appid) => {
       stopped = await killProcessTreeElevated(running.pid)
     }
     if (stopped) {
-      // Clean up monitoring intervals if they exist
-      if (running.appid) {
-        const interval = gameMonitorIntervals.get(running.appid)
-        if (interval) {
-          clearInterval(interval)
-          gameMonitorIntervals.delete(running.appid)
-        }
-        runningGames.delete(running.appid)
-      }
-      if (running.exePath) {
-        const interval = gameMonitorIntervals.get(running.exePath)
-        if (interval) {
-          clearInterval(interval)
-          gameMonitorIntervals.delete(running.exePath)
-        }
-        runningGames.delete(running.exePath)
-      }
+      cleanupGameMonitoring(running.appid, running.exePath)
     }
     return { ok: true, stopped }
   } catch (err) {
