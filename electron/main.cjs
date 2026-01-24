@@ -1518,24 +1518,48 @@ function registerRunningGamePid(appid, exePath, pid) {
   if (exePath) runningGames.set(exePath, payload)
   
   // Clear any existing interval for this game
-  const existingInterval = gameMonitorIntervals.get(appid)
-  if (existingInterval) {
-    clearInterval(existingInterval)
+  if (appid) {
+    const existingInterval = gameMonitorIntervals.get(appid)
+    if (existingInterval) {
+      clearInterval(existingInterval)
+      gameMonitorIntervals.delete(appid)
+    }
+  }
+  if (exePath) {
+    const existingInterval = gameMonitorIntervals.get(exePath)
+    if (existingInterval) {
+      clearInterval(existingInterval)
+      gameMonitorIntervals.delete(exePath)
+    }
   }
   
   // Monitor the process periodically to detect when it exits
+  const startTime = Date.now()
+  const maxMonitoringTime = 24 * 60 * 60 * 1000 // 24 hours maximum
+  
   const checkInterval = setInterval(() => {
+    // Check if we've exceeded maximum monitoring time
+    if (Date.now() - startTime > maxMonitoringTime) {
+      clearInterval(checkInterval)
+      if (appid) gameMonitorIntervals.delete(appid)
+      if (exePath) gameMonitorIntervals.delete(exePath)
+      ucLog(`Game process monitoring timeout: ${appid} (PID: ${pid})`, 'warn')
+      return
+    }
+    
     if (!isProcessRunning(pid)) {
       clearInterval(checkInterval)
-      gameMonitorIntervals.delete(appid)
+      if (appid) gameMonitorIntervals.delete(appid)
+      if (exePath) gameMonitorIntervals.delete(exePath)
       if (appid) runningGames.delete(appid)
       if (exePath) runningGames.delete(exePath)
       ucLog(`Game process exited: ${appid} (PID: ${pid})`)
     }
   }, 2000) // Check every 2 seconds
   
-  // Store the interval reference for cleanup
+  // Store the interval reference for cleanup using both appid and exePath as keys
   if (appid) gameMonitorIntervals.set(appid, checkInterval)
+  if (exePath) gameMonitorIntervals.set(exePath, checkInterval)
 }
 
 function getRunningGame(appid) {
@@ -1546,13 +1570,22 @@ function getRunningGame(appid) {
   // Verify the process is still running before returning it
   if (!isProcessRunning(byApp.pid)) {
     // Process has ended, clean up
-    const interval = gameMonitorIntervals.get(appid)
-    if (interval) {
-      clearInterval(interval)
-      gameMonitorIntervals.delete(appid)
+    if (byApp.appid) {
+      const interval = gameMonitorIntervals.get(byApp.appid)
+      if (interval) {
+        clearInterval(interval)
+        gameMonitorIntervals.delete(byApp.appid)
+      }
+      runningGames.delete(byApp.appid)
     }
-    if (byApp.appid) runningGames.delete(byApp.appid)
-    if (byApp.exePath) runningGames.delete(byApp.exePath)
+    if (byApp.exePath) {
+      const interval = gameMonitorIntervals.get(byApp.exePath)
+      if (interval) {
+        clearInterval(interval)
+        gameMonitorIntervals.delete(byApp.exePath)
+      }
+      runningGames.delete(byApp.exePath)
+    }
     return null
   }
   
@@ -2774,14 +2807,23 @@ ipcMain.handle('uc:game-exe-quit', async (_event, appid) => {
       stopped = await killProcessTreeElevated(running.pid)
     }
     if (stopped) {
-      // Clean up monitoring interval if it exists
-      const interval = gameMonitorIntervals.get(running.appid)
-      if (interval) {
-        clearInterval(interval)
-        gameMonitorIntervals.delete(running.appid)
+      // Clean up monitoring intervals if they exist
+      if (running.appid) {
+        const interval = gameMonitorIntervals.get(running.appid)
+        if (interval) {
+          clearInterval(interval)
+          gameMonitorIntervals.delete(running.appid)
+        }
+        runningGames.delete(running.appid)
       }
-      if (running.appid) runningGames.delete(running.appid)
-      if (running.exePath) runningGames.delete(running.exePath)
+      if (running.exePath) {
+        const interval = gameMonitorIntervals.get(running.exePath)
+        if (interval) {
+          clearInterval(interval)
+          gameMonitorIntervals.delete(running.exePath)
+        }
+        runningGames.delete(running.exePath)
+      }
     }
     return { ok: true, stopped }
   } catch (err) {
