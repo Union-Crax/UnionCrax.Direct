@@ -97,9 +97,14 @@
       "icon": "assets/icon.ico",
       "target": [
         "nsis"
-      ],
+      ],      
       "publisherName": "UnionCrax",
       "artifactName": "${productName}.Setup.${version}.${ext}"
+    },
+
+    "linux": {
+      "target": ["AppImage"],
+      "icon": null
     }
   }
 }
