@@ -70,6 +70,7 @@ export interface ControllerAPI {
   onControllerConnected: (callback: (data: { controllerId: string; controllerName: string; controllerType: string }) => void) => () => void
   onControllerDisconnected: (callback: () => void) => () => void
   onControllerInput: (callback: (data: RawControllerState) => void) => () => void
+  getStates: () => Array<RawControllerState> | undefined
   
   // Overlay-specific
   getOverlaySettings: () => Promise<{ ok: boolean; settings?: { overlayEnabled: boolean; overlayHotkey: string; overlayPosition: 'left' | 'right' }; error?: string }>

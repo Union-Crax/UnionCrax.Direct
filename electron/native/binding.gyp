@@ -15,7 +15,7 @@
       ],
       "conditions": [
         {
-          "conditions": ["OS=='win'"],
+          "condition": "OS=='win'",
           "sources": [
             "injector.cpp",
             "shared_memory.cpp",
@@ -30,7 +30,7 @@
           ]
         },
         {
-          "conditions": ["OS!='win'"],
+          "condition": "OS=='linux'",
           "sources": [
             "gcpad_bridge_posix.cpp"
           ],
@@ -39,12 +39,12 @@
             "-lXtst",
             "-ldl",
             "-lpthread"
-          ],
-          "conditions": [
-            {
-              "conditions": ["OS=='mac'"],
-              "sources": ["stubs_nonwin.cpp"]
-            }
+          ]
+        },
+        {
+          "condition": "OS=='mac'",
+          "sources": [
+            "stubs_nonwin.cpp"
           ]
         }
       ]
