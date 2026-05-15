@@ -184,7 +184,7 @@ Napi::Value GCPadLoad(const Napi::CallbackInfo& info) {
     g_mgr = g_fn_create();
     if (!g_mgr) {
         dlclose(g_lib); g_lib = nullptr;
-        return Napi::Boolean::New(env, false);
+        return env.Undefined();
     }
 
     g_fn_setconn(g_mgr, gcpad_on_connected,    nullptr);
@@ -193,7 +193,7 @@ Napi::Value GCPadLoad(const Napi::CallbackInfo& info) {
     if (!g_fn_init(g_mgr)) {
         g_fn_destroy(g_mgr); g_mgr = nullptr;
         dlclose(g_lib); g_lib = nullptr;
-        return Napi::Boolean::New(env, false);
+        return env.Undefined();
     }
 
     return Napi::Boolean::New(env, true);
@@ -290,7 +290,7 @@ Napi::Value GCPadSetRumble(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
     if (!g_mgr || !g_fn_rumble || info.Length() < 3 ||
         !info[0].IsNumber() || !info[1].IsNumber() || !info[2].IsNumber())
-        return Napi::Boolean::New(env, false);
+        return env.Undefined();
     int slot  = info[0].As<Napi::Number>().Int32Value();
     int left  = info[1].As<Napi::Number>().Int32Value();
     int right = info[2].As<Napi::Number>().Int32Value();
@@ -305,7 +305,7 @@ Napi::Value GCPadSetLed(const Napi::CallbackInfo& info) {
     if (!g_mgr || !g_fn_led || info.Length() < 4 ||
         !info[0].IsNumber() || !info[1].IsNumber() ||
         !info[2].IsNumber() || !info[3].IsNumber())
-        return Napi::Boolean::New(env, false);
+        return env.Undefined();
     int slot = info[0].As<Napi::Number>().Int32Value();
     int r    = info[1].As<Napi::Number>().Int32Value();
     int g    = info[2].As<Napi::Number>().Int32Value();
@@ -360,11 +360,11 @@ Napi::Value GCPadSendMouseWheel(const Napi::CallbackInfo& info)  { return PosixU
 // DualSense trigger / player LEDs (looked up lazily; not all builds export)
 Napi::Value GCPadSetTriggerEffect(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
-    if (!g_mgr || !g_lib || info.Length() < 8) return Napi::Boolean::New(env, false);
+    if (!g_mgr || !g_lib || info.Length() < 8) return env.Undefined();
     typedef int (*Fn_trigger)(GCPadManagerHandle, int, int, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t);
     static Fn_trigger fn = nullptr;
     if (!fn) fn = reinterpret_cast<Fn_trigger>(dlsym(g_lib, "gcpad_set_trigger_effect"));
-    if (!fn) return Napi::Boolean::New(env, false);
+    if (!fn) return env.Undefined();
     int slot  = info[0].As<Napi::Number>().Int32Value();
     int right = info[1].As<Napi::Boolean>().Value() ? 1 : 0;
     uint8_t mode  = static_cast<uint8_t>(info[2].As<Napi::Number>().Uint32Value());
@@ -378,11 +378,11 @@ Napi::Value GCPadSetTriggerEffect(const Napi::CallbackInfo& info) {
 
 Napi::Value GCPadSetPlayerLeds(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
-    if (!g_mgr || !g_lib || info.Length() < 2) return Napi::Boolean::New(env, false);
+    if (!g_mgr || !g_lib || info.Length() < 2) return env.Undefined();
     typedef int (*Fn_pleds)(GCPadManagerHandle, int, uint8_t);
     static Fn_pleds fn = nullptr;
     if (!fn) fn = reinterpret_cast<Fn_pleds>(dlsym(g_lib, "gcpad_set_player_leds"));
-    if (!fn) return Napi::Boolean::New(env, false);
+    if (!fn) return env.Undefined();
     int slot = info[0].As<Napi::Number>().Int32Value();
     uint8_t mask = static_cast<uint8_t>(info[1].As<Napi::Number>().Uint32Value());
     return Napi::Boolean::New(env, fn(g_mgr, slot, mask) != 0);
@@ -399,7 +399,7 @@ typedef void  (*Fn_remapper_map_btn_mouse)(void*, int, int);
 typedef void  (*Fn_remapper_map_axis_mouse)(void*, int, float, float, int, float);
 typedef void  (*Fn_remapper_map_axis_key)(void*, int, uint16_t, float, int);
 typedef void  (*Fn_remapper_clear_all)(void*);
-typedef int   (*Fn_remapper_send_input)(void*, void*, void*);
+typedef void  (*Fn_remapper_send_input)(void*, void*, void*);
 typedef void  (*Fn_remapper_reset_state)(void*);
 
 static Fn_remapper_create        g_fn_remapper_create        = nullptr;
@@ -496,8 +496,9 @@ Napi::Value GCPadRemapperClearAll(const Napi::CallbackInfo& info) {
 
 Napi::Value GCPadRemapperSendInput(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
-    if (!g_remapper || !g_fn_remapper_send_input) return Napi::Boolean::New(env, false);
-    return Napi::Boolean::New(env, g_fn_remapper_send_input(g_remapper, nullptr, nullptr) != 0);
+    if (!g_remapper || !g_fn_remapper_send_input) return env.Undefined();
+    g_fn_remapper_send_input(g_remapper, nullptr, nullptr);
+    return env.Undefined();
 }
 
 Napi::Value GCPadRemapperResetState(const Napi::CallbackInfo& info) {
