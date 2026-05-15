@@ -56,7 +56,6 @@ namespace uc_gcpad {
     Napi::Value GCPadRemapperMapButtonToMouse(const Napi::CallbackInfo& info);
     Napi::Value GCPadRemapperMapAxisToMouse(const Napi::CallbackInfo& info);
     Napi::Value GCPadRemapperMapAxisToKey(const Napi::CallbackInfo& info);
-    Napi::Value GCPadRemapperMapAxisToMouseButton(const Napi::CallbackInfo& info);
     Napi::Value GCPadRemapperClearAll(const Napi::CallbackInfo& info);
     Napi::Value GCPadRemapperSendInput(const Napi::CallbackInfo& info);
     Napi::Value GCPadRemapperResetState(const Napi::CallbackInfo& info);
@@ -108,7 +107,6 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
     exports.Set("gcpadRemapperMapAxisToMouse", Napi::Function::New(env, uc_gcpad::GCPadRemapperMapAxisToMouse));
     exports.Set("gcpadRemapperMapAxisToKey", Napi::Function::New(env, uc_gcpad::GCPadRemapperMapAxisToKey));
     exports.Set("gcpadRemapperMapAxisToMouseButton", Napi::Function::New(env, uc_gcpad::GCPadRemapperMapAxisToMouseButton));
-    Napi::Value GCPadRemapperMapAxisToMouseButton(const Napi::CallbackInfo& info);
     exports.Set("gcpadRemapperClearAll", Napi::Function::New(env, uc_gcpad::GCPadRemapperClearAll));
     exports.Set("gcpadRemapperSendInput", Napi::Function::New(env, uc_gcpad::GCPadRemapperSendInput));
     exports.Set("gcpadRemapperResetState", Napi::Function::New(env, uc_gcpad::GCPadRemapperResetState));

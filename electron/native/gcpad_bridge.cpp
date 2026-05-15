@@ -642,6 +642,19 @@ Napi::Value GCPadRemapperMapAxisToKey(const Napi::CallbackInfo& info) {
     return env.Undefined();
 }
 
+
+Napi::Value GCPadRemapperMapAxisToMouseButton(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    if (!g_remapper || !g_fn_remapper_map_axis_mouse_btn || info.Length() < 3 || !info[0].IsNumber() || !info[1].IsNumber() || !info[2].IsNumber()) {
+        return env.Undefined();
+    }
+    g_fn_remapper_map_axis_mouse_btn(g_remapper,
+        info[0].As<Napi::Number>().Int32Value(),
+        info[1].As<Napi::Number>().Int32Value(),
+        static_cast<float>(info[2].As<Napi::Number>().DoubleValue()));
+    return env.Undefined();
+}
+
 Napi::Value GCPadRemapperClearAll(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
     if (g_remapper && g_fn_remapper_clear_all) {
