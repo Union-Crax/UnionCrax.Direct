@@ -11,13 +11,22 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react'
 
-// Button indices per GCPad (must match GCPad_API)
-const BTN_DPAD_UP     = 0
-const BTN_DPAD_DOWN   = 1
-const BTN_DPAD_LEFT   = 2
-const BTN_DPAD_RIGHT  = 3
-const BTN_L2          = 6   // Left bumper - navigation modifier
-const BTN_R2          = 7   // Right bumper - action mode
+// Button indices per GCPad C API (must match gcpad_c.h)
+const BTN_DPAD_UP     = 13
+const BTN_DPAD_DOWN   = 14
+const BTN_DPAD_LEFT   = 15
+const BTN_DPAD_RIGHT  = 16
+const BTN_L2          = 9   // Left bumper - navigation modifier
+const BTN_R2          = 10  // Right bumper - action mode
+const BTN_A           = 0   // Confirm
+const BTN_B           = 1   // Cancel
+const BTN_X           = 2
+const BTN_Y           = 3
+const BTN_START       = 4
+const BTN_SELECT      = 5
+const BTN_GUIDE       = 6
+const BTN_L1          = 7
+const BTN_R1          = 8
 
 export interface ControllerNavigationOptions {
   onConfirm?: () => void
