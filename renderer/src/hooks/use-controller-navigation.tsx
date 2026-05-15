@@ -7,41 +7,42 @@
  * already handle `tabIndex` + `onKeyDown` just work.
  */
 
-import { useEffect, useRef, useCallback, useState } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import type { RawControllerState } from '../types/controller'
 
 const DEADZONE = 0.3
 const DPAD_THRESHOLD = 0.5
 
-// Mapping from gcpad button indices to nav actions
+// Button indices per gcpad::Button enum
 const BTN_A = 0
 const BTN_B = 1
 const BTN_X = 2
 const BTN_Y = 3
-const BTN_LB = 4
-const BTN_RB = 5
+const BTN_START = 4
+const BTN_SELECT = 5
 const BTN_GUIDE = 6
-const BTN_LS = 7
-const BTN_RS = 8
-const BTN_DPAD_UP = 10
-const BTN_DPAD_DOWN = 11
-const BTN_DPAD_LEFT = 12
-const BTN_DPAD_RIGHT = 13
+const BTN_L1 = 7
+const BTN_R1 = 8
+const BTN_L2 = 9
+const BTN_R2 = 10
+const BTN_L3 = 11
+const BTN_R3 = 12
+const BTN_DPAD_UP = 13
+const BTN_DPAD_DOWN = 14
+const BTN_DPAD_LEFT = 15
+const BTN_DPAD_RIGHT = 16
+const BTN_TOUCHPAD = 17
 
 type Direction = 'up' | 'down' | 'left' | 'right'
 
 export function useControllerNavigation(enabled = true) {
-  const [isFocused, setIsFocused] = useState(false)
   const lastAxis = useRef({ x: 0, y: 0 })
   const lastButtons = useRef<Record<number, boolean>>({})
   const edgeDebounce = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const focusActiveElement = useCallback(() => {
     const active = document.activeElement
-    if (active && active !== document.body) {
-      setIsFocused(true)
-      return
-    }
+    if (active && active !== document.body) return
     const firstFocusable = document.querySelector<HTMLElement>(
       '[tabindex]:not([tabindex="-1"]), button, a[href], input, select, textarea, [role="button"]'
     )
@@ -49,8 +50,7 @@ export function useControllerNavigation(enabled = true) {
   }, [])
 
   const dispatchNavKey = useCallback((direction: Direction) => {
-    const keyMap = { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' }
-    const key = keyMap[direction]
+    const key = { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' }[direction]
     const event = new KeyboardEvent('keydown', {
       key, code: key, bubbles: true, cancelable: true, composed: true,
     })
@@ -63,14 +63,14 @@ export function useControllerNavigation(enabled = true) {
     const buttons = state.buttons || []
     const axes = state.axes || []
 
-    // D-pad via buttons
+    // D-pad via buttons (edge detection)
     for (const [btn, dir] of [[BTN_DPAD_UP, 'up'], [BTN_DPAD_DOWN, 'down'], [BTN_DPAD_LEFT, 'left'], [BTN_DPAD_RIGHT, 'right']] as const) {
       if (buttons[btn] && !lastButtons.current[btn]) {
         dispatchNavKey(dir)
       }
     }
 
-    // Left stick axes for navigation
+    // Left stick axes for navigation (axes[0] = left/right, axes[1] = up/down)
     const lx = axes[0] ?? 0
     const ly = axes[1] ?? 0
 
@@ -94,7 +94,7 @@ export function useControllerNavigation(enabled = true) {
 
     // A button = Enter (activate)
     if (buttons[BTN_A] && !lastButtons.current[BTN_A]) {
-      dispatchNavKey('down') // Triggers focus movement, use Enter manually for now
+      dispatchNavKey('down')
     }
 
     // B button = Escape/Back
@@ -103,7 +103,6 @@ export function useControllerNavigation(enabled = true) {
       document.dispatchEvent(event)
     }
 
-    // Store previous button state
     buttons.forEach((v, i) => { lastButtons.current[i] = v })
   }, [enabled, dispatchNavKey])
 
@@ -112,16 +111,6 @@ export function useControllerNavigation(enabled = true) {
     const unsub = (window.ucController as any).onControllerInput(handleInput)
     return () => { if (unsub) unsub() }
   }, [handleInput])
-
-  useEffect(() => {
-    const handler = () => setIsFocused(document.activeElement !== document.body)
-    window.addEventListener('focus', handler)
-    document.addEventListener('focusin', handler)
-    return () => {
-      window.removeEventListener('focus', handler)
-      document.removeEventListener('focusin', handler)
-    }
-  }, [])
 
   const focusRef = useRef<HTMLElement | null>(null)
 
@@ -133,7 +122,7 @@ export function useControllerNavigation(enabled = true) {
     first?.focus()
   }, [])
 
-  return { focusRef, isFocused, focusFirst, enableControllerNav: focusActiveElement }
+  return { focusRef, focusFirst, enableControllerNav: focusActiveElement }
 }
 
 export default useControllerNavigation
