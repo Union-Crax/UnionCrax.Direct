@@ -431,6 +431,7 @@ declare global {
         toastVertical?: 'top' | 'bottom'
       }) => void) => () => void
       onDownloadUpdate: (callback: (update: DownloadUpdatePayload) => void) => () => void
+      onAchievementUnlock?: (callback: (achievement: { id: string; appid: string; displayName: string; description?: string }) => void) => () => void
     }
     ucController?: {
       getSettings: () => Promise<{

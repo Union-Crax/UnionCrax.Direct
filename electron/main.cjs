@@ -9764,6 +9764,8 @@ function runLinuxTool(toolCmd, toolArgs, env, opts) {
         proc.on('error', (err) => resolve({ ok: false, error: err.message }))
       } else {
         proc.unref()
+        // Start Steam achievement watcher if using steam emulator
+        setTimeout(() => startSteamAchievementWatcher(appid, path.dirname(exePath)), 5000)
         resolve({ ok: true, pid: proc.pid })
         proc.on('error', () => {})
       }
@@ -10197,6 +10199,8 @@ ipcMain.handle('uc:vr-launch-steamvr', async () => {
           env,
         })
         proc.unref()
+        // Start Steam achievement watcher if using steam emulator
+        setTimeout(() => startSteamAchievementWatcher(appid, path.dirname(exePath)), 5000)
         ucLog('SteamVR launched via steam:// URL')
         return { ok: true, method: 'steam-url' }
       } catch {}
@@ -10213,6 +10217,8 @@ ipcMain.handle('uc:vr-launch-steamvr', async () => {
         env,
       })
       proc.unref()
+        // Start Steam achievement watcher if using steam emulator
+        setTimeout(() => startSteamAchievementWatcher(appid, path.dirname(exePath)), 5000)
       ucLog(`SteamVR launched via startup script: ${startup}`)
       return { ok: true, method: 'startup-script' }
     }
@@ -10300,6 +10306,8 @@ function launchTrackedGameProcess({ appid, exePath, gameName, showGameName, comm
       trackGameLaunch(appid, exePath)
       proc.once('spawn', () => {
         proc.unref()
+        // Start Steam achievement watcher if using steam emulator
+        setTimeout(() => startSteamAchievementWatcher(appid, path.dirname(exePath)), 5000)
         registerRunningGame(appid, exePath, proc, gameName, showGameName)
         ucLog(`Game launched successfully: ${appid} (PID: ${proc.pid})`)
         resolve({ ok: true, pid: proc.pid })
@@ -11877,3 +11885,67 @@ ipcMain.handle('uc:achievements-reset-stats', () => {
   achievementStats.consecutiveDays = 0
   return { ok: true }
 })
+
+// Steam Achievement Watching Support
+// Watches for Steam emulator achievement files and integrates with overlay
+
+const steamAchievementWatchers = new Map() // appid -> { pid, path, watcher }
+
+function startSteamAchievementWatcher(appid, gamePath) {
+  if (!appid) return
+  const steamEmuPath = path.join(gamePath, 'settings')
+  const achievementsPath = path.join(steamEmuPath, 'achievements.ini')
+  
+  if (steamAchievementWatchers.has(appid)) return
+  
+  try {
+    // Watch for achievement file changes (Goldberg-style)
+    const watcher = fs.watch(achievementsPath, (eventType) => {
+      if (eventType === 'change') {
+        ucLog(`[SteamAchievement] Achievements file changed for ${appid}`)
+        // Parse and report new achievements
+        try {
+          const content = fs.readFileSync(achievementsPath, 'utf8')
+          const lines = content.split('\n')
+          // Parse achievement unlocks
+          for (const line of lines) {
+            const [idx, status] = line.split('=')
+            if (status === '1') {
+              // Achievement unlocked
+              const achievement = {
+                id: `achv_${idx}`,
+                appid,
+                name: `Achievement ${idx}`,
+                displayName: `Achievement ${idx}`,
+                description: '',
+                icon: '',
+                achieved: true,
+                unlockTime: Date.now(),
+                hidden: false,
+              }
+              // Send to renderer via IPC
+              for (const win of BrowserWindow.getAllWindows()) {
+                win.webContents.send('uc:steam-achievement-unlock', achievement)
+              }
+            }
+          }
+        } catch (e) {
+          ucLog(`[SteamAchievement] Failed to read achievements: ${e.message}`, 'warn')
+        }
+      }
+    })
+    
+    steamAchievementWatchers.set(appid, { pid: null, path: steamEmuPath, watcher })
+    ucLog(`[SteamAchievement] Started watching ${appid} at ${steamEmuPath}`)
+  } catch (e) {
+    ucLog(`[SteamAchievement] Failed to start watcher: ${e.message}`, 'warn')
+  }
+}
+
+function stopSteamAchievementWatcher(appid) {
+  const entry = steamAchievementWatchers.get(appid)
+  if (entry && entry.watcher) {
+    entry.watcher.close()
+  }
+  steamAchievementWatchers.delete(appid)
+}
