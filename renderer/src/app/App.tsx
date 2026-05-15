@@ -25,6 +25,13 @@ import { Toaster } from "@/components/Toaster"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { AlertTriangle } from "lucide-react"
+import { useControllerNavigation } from "@/hooks/use-controller-navigation"
+
+function ControllerNavProvider({ children }: { children: React.ReactNode }) {
+  // Enable controller navigation throughout the app
+  useControllerNavigation()
+  return <>{children}</>
+}
 
 function ExtractionCloseGuard() {
   const { downloads } = useDownloads()
@@ -102,36 +109,38 @@ export default function App() {
     <HashRouter>
       <ToastProvider>
         <DownloadsProvider>
-          <Routes>
-            <Route path="/overlay" element={<InGameOverlay />} />
+          <ControllerNavProvider>
+            <Routes>
+              <Route path="/overlay" element={<InGameOverlay />} />
 
-            {/* Auth pages (inside app layout) */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/verify-email" element={<VerifyEmailPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/reset-password" element={<ResetPasswordPage />} />
+              {/* Auth pages (inside app layout) */}
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/verify-email" element={<VerifyEmailPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-            {/* App routes - no login required */}
-            <Route element={<AppWithDownloads />}>
-              <Route path="/" element={<LauncherPage />} />
-              <Route path="/launcher" element={<LauncherPage />} />
-              <Route path="/search" element={<SearchPage />} />
-              <Route path="/game/:id" element={<GameDetailPage />} />
-              <Route path="/library" element={<LibraryPage />} />
-              <Route path="/collections" element={<CollectionsPage />} />
-              <Route path="/downloads" element={<DownloadsPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/wishlist" element={<WishlistPage />} />
-              <Route path="/liked" element={<LikedPage />} />
-              <Route path="/account" element={<AccountOverviewPage />} />
-              <Route path="/view-history" element={<ViewHistoryPage />} />
-              <Route path="/search-history" element={<SearchHistoryPage />} />
-              <Route path="/screenshots" element={<ScreenshotsPage />} />
-            </Route>
+              {/* App routes - no login required */}
+              <Route element={<AppWithDownloads />}>
+                <Route path="/" element={<LauncherPage />} />
+                <Route path="/launcher" element={<LauncherPage />} />
+                <Route path="/search" element={<SearchPage />} />
+                <Route path="/game/:id" element={<GameDetailPage />} />
+                <Route path="/library" element={<LibraryPage />} />
+                <Route path="/collections" element={<CollectionsPage />} />
+                <Route path="/downloads" element={<DownloadsPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/wishlist" element={<WishlistPage />} />
+                <Route path="/liked" element={<LikedPage />} />
+                <Route path="/account" element={<AccountOverviewPage />} />
+                <Route path="/view-history" element={<ViewHistoryPage />} />
+                <Route path="/search-history" element={<SearchHistoryPage />} />
+                <Route path="/screenshots" element={<ScreenshotsPage />} />
+              </Route>
 
-            {/* Fallback */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+              {/* Fallback */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </ControllerNavProvider>
         </DownloadsProvider>
         <Toaster />
       </ToastProvider>
